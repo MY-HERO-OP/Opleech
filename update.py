@@ -14,19 +14,30 @@ if ospath.exists('log.txt'):
     with open('log.txt', 'r+') as f:
         f.truncate(0)
 
-if ospath.exists('rlog.txt'):
-    remove('rlog.txt')
+basicConfig(format='%(levelname)s | From %(name)s -> %(module)s line no: %(lineno)d | %(message)s',
+                    handlers=[FileHandler('log.txt'), StreamHandler()], level=INFO)
 
-basicConfig(format='%(asctime)s: [%(levelname)s: %(filename)s - %(lineno)d] ~ %(message)s',
-            handlers=[FileHandler('log.txt'), StreamHandler()],
-            datefmt='%d-%b-%y %I:%M:%S %p',
-            level=INFO)
+CONFIG_FILE_URL = environ.get('CONFIG_FILE_URL')
+try:
+    if len(CONFIG_FILE_URL) == 0:
+        raise TypeError
+    try:
+        res = rget(CONFIG_FILE_URL)
+        if res.status_code == 200:
+            with open('config.env', 'wb+') as f:
+                f.write(res.content)
+        else:
+            log_error(f"Failed to download config.env {res.status_code}")
+    except Exception as e:
+        log_error(f"CONFIG_FILE_URL: {e}")
+except:
+    pass
 
 load_dotenv('config.env', override=True)
 
 BOT_TOKEN = environ.get('BOT_TOKEN', '')
 if len(BOT_TOKEN) == 0:
-    error("BOT_TOKEN variable is missing! Exiting now")
+    log_error("BOT_TOKEN variable is missing! Exiting now")
     exit(1)
 
 bot_id = BOT_TOKEN.split(':', 1)[0]
@@ -45,16 +56,16 @@ if DATABASE_URL:
 
 UPSTREAM_REPO = environ.get('UPSTREAM_REPO', '')
 if len(UPSTREAM_REPO) == 0:
-    UPSTREAM_REPO = 'https://github.com/MY-HERO-OP/test'
+    UPSTREAM_REPO = 'https://github.com/TELLYHUBCLOUD/Aeons'
 
 UPSTREAM_BRANCH = environ.get('UPSTREAM_BRANCH', '')
 if len(UPSTREAM_BRANCH) == 0:
     UPSTREAM_BRANCH = 'main'
 
-if path.exists('.git'):
-    run(["rm", "-rf", ".git"])
+if ospath.exists('.git'):
+    srun(["rm", "-rf", ".git"])
 
-update = run([f"git init -q \
+update = srun([f"git init -q \
                  && git config --global user.email yesiamshojib@gmail.com \
                  && git config --global user.name 5hojib \
                  && git add . \
@@ -64,6 +75,6 @@ update = run([f"git init -q \
                  && git reset --hard origin/{UPSTREAM_BRANCH} -q"], shell=True)
 
 if update.returncode == 0:
-    info('Successfully updated with latest commit from UPSTREAM_REPO')
+    log_info('Successfully updated with latest commit from UPSTREAM_REPO')
 else:
-    error('Something went wrong while updating, check UPSTREAM_REPO if valid or not!')
+    log_error('Something went wrong while updating, check UPSTREAM_REPO if valid or not!')
